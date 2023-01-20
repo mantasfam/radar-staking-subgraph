@@ -1,0 +1,44 @@
+specVersion: 0.0.1
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: StakingRewardsProxy
+    network: mainnet
+    source:
+      address: "0x962B4D8b1f8940D6a67399DC3A8D7549250888B8"
+      abi: StakingRewardsProxy
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - ClaimInitiated
+        - Claimed
+        - MessageFailed
+        - OwnershipTransferred
+        - SetTrustedRemote
+        - StakeInitiated
+        - WithdrawalInitiated
+        - Withdrawn
+      abis:
+        - name: StakingRewardsProxy
+          file: ./abis/StakingRewardsProxy.json
+      eventHandlers:
+        - event: ClaimInitiated(indexed address)
+          handler: handleClaimInitiated
+        - event: Claimed(indexed address,uint256)
+          handler: handleClaimed
+        - event: MessageFailed(uint16,bytes,uint64,bytes)
+          handler: handleMessageFailed
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: SetTrustedRemote(uint16,bytes)
+          handler: handleSetTrustedRemote
+        - event: StakeInitiated(indexed address,uint256)
+          handler: handleStakeInitiated
+        - event: WithdrawalInitiated(indexed address)
+          handler: handleWithdrawalInitiated
+        - event: Withdrawn(indexed address,uint256)
+          handler: handleWithdrawn
+      file: ./src/staking-rewards-proxy.ts
