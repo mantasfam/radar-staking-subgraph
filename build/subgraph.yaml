@@ -1,6 +1,6 @@
 specVersion: 0.0.4
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
   - kind: ethereum
     name: StakingRewardsProxy
@@ -18,10 +18,10 @@ dataSources:
         - Withdrawn
       abis:
         - name: StakingRewardsProxy
-          file: ./abis/StakingRewardsProxy.json
+          file: StakingRewardsProxy/abis/StakingRewardsProxy.json
       eventHandlers:
         - event: StakeInitiated(indexed address,uint256)
           handler: handleStakeInitiated
         - event: Withdrawn(indexed address,uint256)
           handler: handleWithdrawn
-      file: ./src/mapping.ts
+      file: StakingRewardsProxy/StakingRewardsProxy.wasm
