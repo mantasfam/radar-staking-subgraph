@@ -2,13 +2,14 @@ type Transaction @entity(immutable: true) {
   id: Bytes!
   user: User!
   amount: BigInt!
-  stakedFlg: Boolean!
-  withdrawnFlg: Boolean!
+  stakeFlg: Boolean!
+  withdrawFlg: Boolean!
 }
 
 type User @entity {
   id: Bytes!
   user: Bytes!
   amountStaked: BigInt!
+  transactionCount: Int!
   transactions: [Transaction!]! @derivedFrom(field: "user")
 }

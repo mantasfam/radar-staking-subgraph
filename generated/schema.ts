@@ -62,22 +62,22 @@ export class Transaction extends Entity {
     this.set("amount", Value.fromBigInt(value));
   }
 
-  get stakedFlg(): boolean {
-    let value = this.get("stakedFlg");
+  get stakeFlg(): boolean {
+    let value = this.get("stakeFlg");
     return value!.toBoolean();
   }
 
-  set stakedFlg(value: boolean) {
-    this.set("stakedFlg", Value.fromBoolean(value));
+  set stakeFlg(value: boolean) {
+    this.set("stakeFlg", Value.fromBoolean(value));
   }
 
-  get withdrawnFlg(): boolean {
-    let value = this.get("withdrawnFlg");
+  get withdrawFlg(): boolean {
+    let value = this.get("withdrawFlg");
     return value!.toBoolean();
   }
 
-  set withdrawnFlg(value: boolean) {
-    this.set("withdrawnFlg", Value.fromBoolean(value));
+  set withdrawFlg(value: boolean) {
+    this.set("withdrawFlg", Value.fromBoolean(value));
   }
 }
 
@@ -128,6 +128,15 @@ export class User extends Entity {
 
   set amountStaked(value: BigInt) {
     this.set("amountStaked", Value.fromBigInt(value));
+  }
+
+  get transactionCount(): i32 {
+    let value = this.get("transactionCount");
+    return value!.toI32();
+  }
+
+  set transactionCount(value: i32) {
+    this.set("transactionCount", Value.fromI32(value));
   }
 
   get transactions(): Array<Bytes> {

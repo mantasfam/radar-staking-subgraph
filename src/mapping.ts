@@ -12,8 +12,8 @@ export function handleStakeInitiated(event: StakeInitiated): void {
   // Set Transaction Entity fields
   transaction.user = event.params.user;
   transaction.amount = event.params.amount;
-  transaction.stakedFlg = true;
-  transaction.withdrawnFlg = false;
+  transaction.stakeFlg = true;
+  transaction.withdrawFlg = false;
   // Save entity to store
   transaction.save();
 
@@ -23,8 +23,10 @@ export function handleStakeInitiated(event: StakeInitiated): void {
     user = new User(userId);
     user.amountStaked = event.params.amount;
     user.user = user.id;
+    user.transactionCount = 1;
   } else {
     user.amountStaked = user.amountStaked.plus(event.params.amount);
+    user.transactionCount++;
   }
   // Save entity to store
   user.save();
@@ -39,8 +41,8 @@ export function handleWithdrawn(event: Withdrawn): void {
   // Set Transaction Entity fields
   transaction.user = event.params.user;
   transaction.amount = event.params.amount;
-  transaction.stakedFlg = false;
-  transaction.withdrawnFlg = true;
+  transaction.stakeFlg = false;
+  transaction.withdrawFlg = true;
 
   // Save entity to store
   transaction.save();
@@ -48,6 +50,7 @@ export function handleWithdrawn(event: Withdrawn): void {
   const userId = event.params.user;
   let user = User.load(userId);
   user!.amountStaked = user!.amountStaked.minus(event.params.amount);
+  user!.transactionCount++;
   // Save entity to store
   user!.save();
 }
