@@ -1,4 +1,4 @@
-import { Bytes, BigInt } from "@graphprotocol/graph-ts";
+import { Bytes, BigInt, Address } from "@graphprotocol/graph-ts";
 import { Transaction } from "../../generated/schema";
 
 export function getOrCreateTransaction(

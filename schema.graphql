@@ -6,7 +6,6 @@ type Account @entity {
   totalStakeEvents: BigInt!
   totalUnstakeEvents: BigInt!
   totalHarvestEvents: BigInt!
-  totalTransactions: BigInt!
   transactions: [Transaction!] @derrivedFrom(field: "account")
 }
 
