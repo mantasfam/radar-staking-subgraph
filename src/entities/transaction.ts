@@ -3,7 +3,7 @@ import { Transaction } from "../../generated/schema";
 
 export function getOrCreateTransaction(
   txHash: Bytes,
-  accountAddress: string,
+  accountAddress: Address,
   timestamp: BigInt,
   block: BigInt,
   day: string
@@ -13,7 +13,7 @@ export function getOrCreateTransaction(
 
   if (transaction == null) {
     transaction = new Transaction(transactionHash);
-    transaction.account = accountAddress;
+    transaction.account = accountAddress.toHexString();
     transaction.timestamp = timestamp;
     transaction.block = block;
     transaction.day = day;
