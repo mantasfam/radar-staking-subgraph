@@ -1,0 +1,47 @@
+type Account @entity {
+  id: ID! # account address
+  address: Bytes!
+  currentStakeAmount: BigInt!
+  totalHarvestAmount: BigInt!
+  totalStakeEvents: BigInt!
+  totalUnstakeEvents: BigInt!
+  totalHarvestEvents: BigInt!
+  totalTransactions: BigInt!
+  transactions: [Transaction!] @derrivedFrom(field: "account")
+}
+
+type Transaction @entity {
+  id: ID! # txhash
+  account: Account!
+  timestamp: BigInt!
+  block: BigInt!
+  day: Day!
+  events: [Event!] @derrivedFrom(field: "transaction")
+}
+
+type Event @entity {
+  id: ID! # txhash + log index
+  transaction: Transaction!
+  eventType: EventType!
+  amount: BigInt!
+}
+
+type Day @entity {
+  id: ID!
+  date: String!
+  currentStakeAmount: BigInt!
+  totalHarvestAmount: BigInt!
+  totalDayStakedAmount: BigInt!
+  totalDaylUnstakeedAmount: BigInt!
+  totalDayHarvestAmount: BigInt!
+  totalDayStakeEvents: BigInt!
+  totalDayUnstakeEvents: BigInt!
+  totalDayHarvestEvents: BigInt!
+  transactions: [Transaction!] @derrivedFrom(field: "day")
+}
+
+enum EventType {
+  STAKE
+  UNSTAKE
+  HARVEST
+}

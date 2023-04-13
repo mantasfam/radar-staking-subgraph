@@ -1,0 +1,36 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Contract
+    network: goerli
+    source:
+      address: "0xa810a8005069B70C72a2a3E4a854595A31e7d197"
+      abi: Contract
+      startBlock: 8732371
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - OwnershipTransferred
+        - TokensHarvested
+        - TokensStaked
+        - TokensUnstaked
+        - TokensUnstakingTriggered
+      abis:
+        - name: Contract
+          file: ./abis/Contract.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: TokensHarvested(indexed address,uint256)
+          handler: handleTokensHarvested
+        - event: TokensStaked(indexed address,uint256)
+          handler: handleTokensStaked
+        - event: TokensUnstaked(indexed address,uint256)
+          handler: handleTokensUnstaked
+        - event: TokensUnstakingTriggered(indexed address,uint256)
+          handler: handleTokensUnstakingTriggered
+      file: ./src/contract.ts
