@@ -32,7 +32,7 @@ export function handleTokensStaked(tokensStakedEvent: TokensStakedEvent): void {
 
   getOrCreateTransaction(
     tokensStakedEvent.transaction.hash,
-    tokensStakedEvent.transaction.from,
+    tokensStakedEvent.params.owner,
     tokensStakedEvent.block.timestamp,
     tokensStakedEvent.block.number,
     day
