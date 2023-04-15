@@ -1,26 +1,25 @@
-import { Bytes, BigInt, Address } from "@graphprotocol/graph-ts";
-import { Transaction } from "../../generated/schema";
+import { Bytes, BigInt } from "@graphprotocol/graph-ts";
+import { Transaction, Account } from "../../generated/schema";
 
-export function getOrCreateTransaction(
+export function createTransaction(
   txHash: Bytes,
-  address: Address,
+  account: Account,
   timestamp: BigInt,
   block: BigInt,
   day: string
 ): Transaction {
-  let transactionHash = txHash.toHexString();
-  let transaction = Transaction.load(transactionHash);
+  let transaction = new Transaction(txHash.toHexString());
+  transaction.account = account.id;
+  transaction.timestamp = timestamp;
+  transaction.block = block;
+  transaction.day = day;
+  transaction.save();
 
-  if (transaction == null) {
-    let accountAddress = address.toHexString();
+  return transaction;
+}
 
-    transaction = new Transaction(transactionHash);
-    transaction.account = accountAddress;
-    transaction.timestamp = timestamp;
-    transaction.block = block;
-    transaction.day = day;
-    transaction.save();
-  }
+export function getTransaction(txHash: Bytes): Transaction | null {
+  let transaction = Transaction.load(txHash.toHexString());
 
   return transaction;
 }

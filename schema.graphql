@@ -7,6 +7,7 @@ type Account @entity {
   totalStakeEvents: BigInt!
   totalUnstakeEvents: BigInt!
   totalHarvestEvents: BigInt!
+  totalTransactions: BigInt!
   transactions: [Transaction!] @derivedFrom(field: "account")
 }
 
@@ -40,6 +41,7 @@ type Day @entity {
   totalDayStakeEvents: BigInt!
   totalDayUnstakeEvents: BigInt!
   totalDayHarvestEvents: BigInt!
+  totalTransactions: BigInt!
   transactions: [Transaction!] @derivedFrom(field: "day")
 }
 
