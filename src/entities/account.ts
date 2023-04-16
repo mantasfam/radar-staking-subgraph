@@ -14,6 +14,7 @@ export function getOrCreateAccount(address: Address): Account {
     account.totalStakeEvents = BIG_INT_ZERO;
     account.totalUnstakeEvents = BIG_INT_ZERO;
     account.totalHarvestEvents = BIG_INT_ZERO;
+    account.totalTransactions = BIG_INT_ZERO;
     account.save();
   }
 

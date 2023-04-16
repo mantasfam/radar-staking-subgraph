@@ -32,15 +32,14 @@ type Event @entity {
 type Day @entity {
   "unique identifier and primary key of the entity"
   id: ID!
+  # timestamp rounded to current day by dividing by 86400
+  timestamp: Int!
   date: String!
   currentStakeAmount: BigInt!
   totalHarvestAmount: BigInt!
   totalDayStakedAmount: BigInt!
-  totalDaylUnstakeedAmount: BigInt!
+  totalDaylUnstakedAmount: BigInt!
   totalDayHarvestAmount: BigInt!
-  totalDayStakeEvents: BigInt!
-  totalDayUnstakeEvents: BigInt!
-  totalDayHarvestEvents: BigInt!
   totalTransactions: BigInt!
   transactions: [Transaction!] @derivedFrom(field: "day")
 }
