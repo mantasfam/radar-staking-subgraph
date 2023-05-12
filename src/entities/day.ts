@@ -18,7 +18,7 @@ export function updateDay(
   if (day === null) {
     day = new Day(dayId.toString());
     day.timestamp = dayStartTimestamp;
-    day.date = new Date(timestamp.toI64() * 1000).toISOString();
+    day.date = new Date(timestamp.toI64() * 1000).toISOString().substring(0, 10);
     day.dayStakedAmount = BIG_DEC_ZERO;
     day.daylUnstakedAmount = BIG_DEC_ZERO;
     day.dayHarvestAmount = BIG_DEC_ZERO;
