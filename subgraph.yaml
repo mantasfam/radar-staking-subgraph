@@ -4,17 +4,16 @@ schema:
 dataSources:
   - kind: ethereum
     name: Contract
-    network: goerli
+    network: mainnet
     source:
-      address: "0xa810a8005069B70C72a2a3E4a854595A31e7d197"
+      address: "0x38f1f6a151814b8a8a50664e41712cf75415e230"
       abi: Contract
-      startBlock: 8732371
+      startBlock: 17094596
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - OwnershipTransferred
         - TokensHarvested
         - TokensStaked
         - TokensUnstaked

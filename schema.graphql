@@ -1,13 +1,16 @@
 type Account @entity {
   "unique identifier and primary key of the entity"
   id: ID! # account address
+  "account address"
   address: Bytes!
-  currentStakeAmount: BigInt!
-  totalHarvestAmount: BigInt!
-  totalStakeEvents: BigInt!
-  totalUnstakeEvents: BigInt!
-  totalHarvestEvents: BigInt!
-  totalTransactions: BigInt!
+  "current stake"
+  stakedAmount: BigDecimal!
+  "total harvested"
+  harvestedAmount: BigDecimal!
+  transactionsCount: BigInt!
+  stakeEventsCount: BigInt!
+  unstakeEventsCount: BigInt!
+  harvestEventsCount: BigInt!
   transactions: [Transaction!] @derivedFrom(field: "account")
 }
 
@@ -15,33 +18,53 @@ type Transaction @entity {
   "unique identifier and primary key of the entity"
   id: ID! # txhash
   account: Account!
-  timestamp: BigInt!
+  timestamp: Int!
   block: BigInt!
   day: Day!
-  events: [Event!] @derivedFrom(field: "transaction")
+  events: [ActivityEvent!] @derivedFrom(field: "transaction")
 }
 
-type Event @entity {
+type ActivityEvent @entity {
   "unique identifier and primary key of the entity"
   id: ID! # txhash + log index
   transaction: Transaction!
   eventType: EventType!
-  amount: BigInt!
+  amount: BigDecimal!
 }
 
 type Day @entity {
   "unique identifier and primary key of the entity"
-  id: ID!
+  id: ID! # timestamp rounded to current day by dividing by 86400
   # timestamp rounded to current day by dividing by 86400
   timestamp: Int!
   date: String!
-  currentStakeAmount: BigInt!
-  totalHarvestAmount: BigInt!
-  totalDayStakedAmount: BigInt!
-  totalDaylUnstakedAmount: BigInt!
-  totalDayHarvestAmount: BigInt!
-  totalTransactions: BigInt!
+  stakedAmount: BigDecimal!
+  harvestedAmount: BigDecimal!
+  dayStakedAmount: BigDecimal!
+  daylUnstakedAmount: BigDecimal!
+  dayHarvestAmount: BigDecimal!
+  dayTransactionsCount: BigInt!
+  dayStakeEventsCount: BigInt!
+  dayUnstakeEventsCount: BigInt!
+  dayHarvestEventsCount: BigInt!
+  accountsCount: BigInt!
+  transactionsCount: BigInt!
+  stakeEventsCount: BigInt!
+  unstakeEventsCount: BigInt!
+  harvestEventsCount: BigInt!
   transactions: [Transaction!] @derivedFrom(field: "day")
+}
+
+type Total @entity {
+  "unique identifier and primary key of the entity"
+  id: ID! # 1
+  stakedAmount: BigDecimal!
+  harvestedAmount: BigDecimal!
+  accountsCount: BigInt!
+  transactionsCount: BigInt!
+  stakeEventsCount: BigInt!
+  unstakeEventsCount: BigInt!
+  harvestEventsCount: BigInt!
 }
 
 enum EventType {

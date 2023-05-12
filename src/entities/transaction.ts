@@ -1,26 +1,26 @@
-import { Bytes, BigInt } from "@graphprotocol/graph-ts";
-import { Transaction, Account } from "../../generated/schema";
+import { Bytes, BigInt, Address } from "@graphprotocol/graph-ts";
+import { Transaction } from "../../generated/schema";
 
 export function createTransaction(
   txHash: Bytes,
-  account: Account,
+  address: Address,
   timestamp: BigInt,
   block: BigInt
-): Transaction {
-  let dayStartTimestamp = (timestamp.toI32() / 86400) * 86400; // rounded
+): boolean {
+  const transactionString = txHash.toHexString();
+  let transaction = Transaction.load(transactionString);
+  let newTransactionFlg = false;
 
-  let transaction = new Transaction(txHash.toHexString());
-  transaction.account = account.id;
-  transaction.timestamp = timestamp;
-  transaction.block = block;
-  transaction.day = dayStartTimestamp.toString();
-  transaction.save();
+  if (transaction == null) {
+    const dayId = timestamp.toI32() / 86400;
+    transaction = new Transaction(transactionString);
+    transaction.account = address.toHexString();
+    transaction.timestamp = timestamp.toI32();
+    transaction.block = block;
+    transaction.day = dayId.toString();
+    transaction.save();
+    newTransactionFlg = true;
+  }
 
-  return transaction;
-}
-
-export function getTransaction(txHash: Bytes): Transaction | null {
-  let transaction = Transaction.load(txHash.toHexString());
-
-  return transaction;
+  return newTransactionFlg;
 }

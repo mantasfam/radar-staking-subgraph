@@ -4,121 +4,101 @@ import {
   TokensUnstaked as TokensUnstakedEvent,
   TokensUnstakingTriggered as TokensUnstakingTriggeredEvent,
 } from "../generated/Contract/Contract";
-import { getOrCreateAccount } from "./entities/account";
-import { getTransaction, createTransaction } from "./entities/transaction";
-import { createEvent } from "./entities/event";
-import { BIG_INT_ONE } from "./constants";
+import { updateAccount } from "./entities/account";
+import { createTransaction } from "./entities/transaction";
+import { createEvent } from "./entities/activityEvent";
+import { updateTotal } from "./entities/total";
 import { updateDay } from "./entities/day";
-
-export function handleTokensHarvested(tokensHarvestedEvent: TokensHarvestedEvent): void {
-  let eventType = "HARVEST";
-
-  let account = getOrCreateAccount(tokensHarvestedEvent.params.owner);
-
-  let transaction = getTransaction(tokensHarvestedEvent.transaction.hash);
-  let newTransactionFlg = false;
-  if (transaction == null) {
-    createTransaction(
-      tokensHarvestedEvent.transaction.hash,
-      account,
-      tokensHarvestedEvent.block.timestamp,
-      tokensHarvestedEvent.block.number
-    );
-    account.totalTransactions = account.totalTransactions.plus(BIG_INT_ONE);
-    newTransactionFlg = true;
-  }
-
-  account.totalHarvestAmount = account.totalHarvestAmount.plus(tokensHarvestedEvent.params.amount);
-  account.totalHarvestEvents = account.totalHarvestEvents.plus(BIG_INT_ONE);
-  account.save();
-
-  createEvent(
-    tokensHarvestedEvent.transaction.hash,
-    tokensHarvestedEvent.logIndex,
-    eventType,
-    tokensHarvestedEvent.params.amount
-  );
-
-  updateDay(
-    tokensHarvestedEvent.block.timestamp,
-    eventType,
-    tokensHarvestedEvent.block.timestamp,
-    newTransactionFlg
-  );
-}
+import { BIG_DECIMAL_1E18 } from "./constants";
 
 export function handleTokensStaked(tokensStakedEvent: TokensStakedEvent): void {
   let eventType = "STAKE";
+  let decimalAmount = tokensStakedEvent.params.amount.divDecimal(BIG_DECIMAL_1E18);
 
-  let account = getOrCreateAccount(tokensStakedEvent.params.owner);
+  const newTransactionFlg = createTransaction(
+    tokensStakedEvent.transaction.hash,
+    tokensStakedEvent.params.owner,
+    tokensStakedEvent.block.timestamp,
+    tokensStakedEvent.block.number
+  );
 
-  let transaction = getTransaction(tokensStakedEvent.transaction.hash);
-  let newTransactionFlg = false;
-  if (transaction == null) {
-    createTransaction(
-      tokensStakedEvent.transaction.hash,
-      account,
-      tokensStakedEvent.block.timestamp,
-      tokensStakedEvent.block.number
-    );
-    account.totalTransactions = account.totalTransactions.plus(BIG_INT_ONE);
-    newTransactionFlg = true;
-  }
-
-  account.currentStakeAmount = account.currentStakeAmount.plus(tokensStakedEvent.params.amount);
-  account.totalStakeEvents = account.totalStakeEvents.plus(BIG_INT_ONE);
-  account.save();
+  const newAccountFlg = updateAccount(
+    tokensStakedEvent.params.owner,
+    decimalAmount,
+    newTransactionFlg,
+    eventType
+  );
 
   createEvent(
     tokensStakedEvent.transaction.hash,
     tokensStakedEvent.logIndex,
-    eventType,
-    tokensStakedEvent.params.amount
+    decimalAmount,
+    eventType
   );
 
-  updateDay(
-    tokensStakedEvent.block.timestamp,
-    eventType,
-    tokensStakedEvent.block.timestamp,
-    newTransactionFlg
-  );
+  updateTotal(decimalAmount, newAccountFlg, newTransactionFlg, eventType);
+
+  updateDay(tokensStakedEvent.block.timestamp, decimalAmount, newTransactionFlg, eventType);
 }
 
 export function handleTokensUnstaked(tokensUnstakedEvent: TokensUnstakedEvent): void {
   let eventType = "UNSTAKE";
+  let decimalAmount = tokensUnstakedEvent.params.amount.divDecimal(BIG_DECIMAL_1E18);
 
-  let account = getOrCreateAccount(tokensUnstakedEvent.params.owner);
+  const newTransactionFlg = createTransaction(
+    tokensUnstakedEvent.transaction.hash,
+    tokensUnstakedEvent.params.owner,
+    tokensUnstakedEvent.block.timestamp,
+    tokensUnstakedEvent.block.number
+  );
 
-  let transaction = getTransaction(tokensUnstakedEvent.transaction.hash);
-  let newTransactionFlg = false;
-  if (transaction == null) {
-    createTransaction(
-      tokensUnstakedEvent.transaction.hash,
-      account,
-      tokensUnstakedEvent.block.timestamp,
-      tokensUnstakedEvent.block.number
-    );
-    account.totalTransactions = account.totalTransactions.plus(BIG_INT_ONE);
-    newTransactionFlg = true;
-  }
-
-  account.currentStakeAmount = account.currentStakeAmount.minus(tokensUnstakedEvent.params.amount);
-  account.totalUnstakeEvents = account.totalUnstakeEvents.plus(BIG_INT_ONE);
-  account.save();
+  const newAccountFlg = updateAccount(
+    tokensUnstakedEvent.params.owner,
+    decimalAmount,
+    newTransactionFlg,
+    eventType
+  );
 
   createEvent(
     tokensUnstakedEvent.transaction.hash,
     tokensUnstakedEvent.logIndex,
-    eventType,
-    tokensUnstakedEvent.params.amount
+    decimalAmount,
+    eventType
   );
 
-  updateDay(
-    tokensUnstakedEvent.block.timestamp,
-    eventType,
-    tokensUnstakedEvent.params.amount,
-    newTransactionFlg
+  updateTotal(decimalAmount, newAccountFlg, newTransactionFlg, eventType);
+
+  updateDay(tokensUnstakedEvent.block.timestamp, decimalAmount, newTransactionFlg, eventType);
+}
+
+export function handleTokensHarvested(tokensHarvestedEvent: TokensHarvestedEvent): void {
+  let eventType = "HARVEST";
+  let decimalAmount = tokensHarvestedEvent.params.amount.divDecimal(BIG_DECIMAL_1E18);
+
+  const newTransactionFlg = createTransaction(
+    tokensHarvestedEvent.transaction.hash,
+    tokensHarvestedEvent.params.owner,
+    tokensHarvestedEvent.block.timestamp,
+    tokensHarvestedEvent.block.number
   );
+
+  const newAccountFlg = updateAccount(
+    tokensHarvestedEvent.params.owner,
+    decimalAmount,
+    newTransactionFlg,
+    eventType
+  );
+
+  createEvent(
+    tokensHarvestedEvent.transaction.hash,
+    tokensHarvestedEvent.logIndex,
+    decimalAmount,
+    eventType
+  );
+
+  updateTotal(decimalAmount, newAccountFlg, newTransactionFlg, eventType);
+
+  updateDay(tokensHarvestedEvent.block.timestamp, decimalAmount, newTransactionFlg, eventType);
 }
 
 export function handleTokensUnstakingTriggered(event: TokensUnstakingTriggeredEvent): void {}

@@ -1,43 +1,54 @@
-import { BigInt } from "@graphprotocol/graph-ts";
+import { BigInt, BigDecimal } from "@graphprotocol/graph-ts";
 import { Day } from "../../generated/schema";
-import { BIG_INT_ZERO, BIG_INT_ONE } from "../constants";
+import { getTotal } from "./total";
+import { BIG_INT_ZERO, BIG_INT_ONE, BIG_DEC_ZERO } from "../constants";
 
 export function updateDay(
   timestamp: BigInt,
-  eventType: String,
-  amount: BigInt,
-  newTransaction: bool
+  decimalAmount: BigDecimal,
+  newTransactionFlg: bool,
+  eventType: String
 ): Day {
-  let dayID = timestamp.toI32() / 86400; // rounded
-  let dayStartTimestamp = dayID * 86400;
-  let day = Day.load(dayID.toString());
+  const dayId = timestamp.toI32() / 86400;
+  let dayStartTimestamp = dayId * 86400; // rounded
+
+  const total = getTotal();
+
+  let day = Day.load(dayId.toString());
   if (day === null) {
-    let previousDay = Day.load((dayID - 1).toString());
-    day = new Day(dayID.toString());
+    day = new Day(dayId.toString());
     day.timestamp = dayStartTimestamp;
-    day.date = new Date(timestamp.toI64()).toISOString();
-    if (previousDay === null) {
-      day.currentStakeAmount = BIG_INT_ZERO;
-      day.totalHarvestAmount = BIG_INT_ZERO;
-    } else {
-      day.currentStakeAmount = previousDay.currentStakeAmount;
-      day.totalHarvestAmount = previousDay.totalHarvestAmount;
-    }
-    day.totalDayStakedAmount = BIG_INT_ZERO;
-    day.totalDaylUnstakedAmount = BIG_INT_ZERO;
-    day.totalDayHarvestAmount = BIG_INT_ZERO;
-    day.totalTransactions = BIG_INT_ZERO;
+    day.date = new Date(timestamp.toI64() * 1000).toISOString();
+    day.dayStakedAmount = BIG_DEC_ZERO;
+    day.daylUnstakedAmount = BIG_DEC_ZERO;
+    day.dayHarvestAmount = BIG_DEC_ZERO;
+    day.dayTransactionsCount = BIG_INT_ZERO;
+    day.dayStakeEventsCount = BIG_INT_ZERO;
+    day.dayUnstakeEventsCount = BIG_INT_ZERO;
+    day.dayHarvestEventsCount = BIG_INT_ZERO;
+  }
+
+  day.stakedAmount = total.stakedAmount;
+  day.harvestedAmount = total.harvestedAmount;
+  day.accountsCount = total.accountsCount;
+  day.transactionsCount = total.transactionsCount;
+  day.stakeEventsCount = total.stakeEventsCount;
+  day.unstakeEventsCount = total.unstakeEventsCount;
+  day.harvestEventsCount = total.harvestEventsCount;
+
+  if (newTransactionFlg) {
+    day.dayTransactionsCount = day.dayTransactionsCount.plus(BIG_INT_ONE);
   }
 
   if (eventType === "STAKE") {
-    day.totalDayStakedAmount = day.totalDayStakedAmount.plus(amount);
+    day.dayStakedAmount = day.dayStakedAmount.plus(decimalAmount);
+    day.dayStakeEventsCount = day.dayStakeEventsCount.plus(BIG_INT_ONE);
   } else if (eventType === "UNSTAKE") {
-    day.totalDaylUnstakedAmount = day.totalDayStakedAmount.plus(amount);
+    day.daylUnstakedAmount = day.daylUnstakedAmount.plus(decimalAmount);
+    day.dayUnstakeEventsCount = day.dayUnstakeEventsCount.plus(BIG_INT_ONE);
   } else if (eventType === "HARVEST") {
-    day.totalDayHarvestAmount = day.totalDayStakedAmount.plus(amount);
-  }
-  if (newTransaction) {
-    day.totalTransactions = day.totalTransactions.plus(BIG_INT_ONE);
+    day.dayHarvestAmount = day.dayHarvestAmount.plus(decimalAmount);
+    day.dayHarvestEventsCount = day.dayHarvestEventsCount.plus(BIG_INT_ONE);
   }
 
   day.save();
