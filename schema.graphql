@@ -74,4 +74,5 @@ enum EventType {
   STAKE
   UNSTAKE
   HARVEST
+  TRIGGER_UNSTAKE
 }
