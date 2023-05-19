@@ -7,7 +7,7 @@ export function updateDay(
   timestamp: BigInt,
   decimalAmount: BigDecimal,
   newTransactionFlg: bool,
-  eventType: String
+  eventType: string
 ): Day {
   const dayId = timestamp.toI32() / 86400;
   let dayStartTimestamp = dayId * 86400; // rounded

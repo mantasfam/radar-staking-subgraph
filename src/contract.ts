@@ -1,3 +1,4 @@
+import { log } from "@graphprotocol/graph-ts";
 import {
   TokensHarvested as TokensHarvestedEvent,
   TokensStaked as TokensStakedEvent,
@@ -9,11 +10,13 @@ import { createTransaction } from "./entities/transaction";
 import { createEvent } from "./entities/activityEvent";
 import { updateTotal } from "./entities/total";
 import { updateDay } from "./entities/day";
-import { BIG_DECIMAL_1E18 } from "./constants";
+import { BIG_DECIMAL_1E18, BIG_DEC_ZERO } from "./constants";
 
 export function handleTokensStaked(tokensStakedEvent: TokensStakedEvent): void {
   let eventType = "STAKE";
   let decimalAmount = tokensStakedEvent.params.amount.divDecimal(BIG_DECIMAL_1E18);
+
+  log.debug("eventType: {}", [tokensStakedEvent.transaction.hash.toString()]);
 
   const newTransactionFlg = createTransaction(
     tokensStakedEvent.transaction.hash,
@@ -101,4 +104,42 @@ export function handleTokensHarvested(tokensHarvestedEvent: TokensHarvestedEvent
   updateDay(tokensHarvestedEvent.block.timestamp, decimalAmount, newTransactionFlg, eventType);
 }
 
-export function handleTokensUnstakingTriggered(event: TokensUnstakingTriggeredEvent): void {}
+export function handleTokensUnstakingTriggered(
+  tokensUnstakingTriggeredEvent: TokensUnstakingTriggeredEvent
+): void {
+  let eventType = "TRIGGER_UNSTAKE";
+
+  log.debug("eventType: {}", [tokensUnstakingTriggeredEvent.transaction.hash.toString()]);
+
+  const newTransactionFlg = createTransaction(
+    tokensUnstakingTriggeredEvent.transaction.hash,
+    tokensUnstakingTriggeredEvent.params.owner,
+    tokensUnstakingTriggeredEvent.block.timestamp,
+    tokensUnstakingTriggeredEvent.block.number
+  );
+
+  const newAccountFlg = updateAccount(
+    tokensUnstakingTriggeredEvent.params.owner,
+    BIG_DEC_ZERO,
+    newTransactionFlg,
+    eventType,
+    tokensUnstakingTriggeredEvent.block.timestamp,
+    tokensUnstakingTriggeredEvent.params.cooldownSeconds
+  );
+
+  createEvent(
+    tokensUnstakingTriggeredEvent.transaction.hash,
+    tokensUnstakingTriggeredEvent.logIndex,
+    BIG_DEC_ZERO,
+    eventType
+  );
+
+  updateTotal(BIG_DEC_ZERO, newAccountFlg, newTransactionFlg, eventType);
+
+  updateDay(
+    tokensUnstakingTriggeredEvent.block.timestamp,
+    BIG_DEC_ZERO,
+    newTransactionFlg,
+    eventType
+  );
+}

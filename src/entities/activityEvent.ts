@@ -5,7 +5,7 @@ export function createEvent(
   txHash: Bytes,
   logId: BigInt,
   decimalAmount: BigDecimal,
-  eventType: string
+  eventType: String
 ): ActivityEvent {
   let id = txHash
     .toHexString()

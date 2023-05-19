@@ -11,6 +11,9 @@ type Account @entity {
   stakeEventsCount: BigInt!
   unstakeEventsCount: BigInt!
   harvestEventsCount: BigInt!
+  cooldownTriggeredAtTimestamp: BigInt!
+  cooldownEndTimestamp: BigInt!
+  cooldownEndTime: String
   transactions: [Transaction!] @derivedFrom(field: "account")
 }
 

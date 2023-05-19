@@ -42,7 +42,7 @@ export function updateTotal(
   } else if (eventType === "UNSTAKE") {
     total.stakedAmount = total.stakedAmount.minus(decimalAmount);
     total.unstakeEventsCount = total.unstakeEventsCount.plus(BIG_INT_ONE);
-  } else if (eventType === "HARVEST ") {
+  } else if (eventType === "HARVEST") {
     total.harvestedAmount = total.harvestedAmount.plus(decimalAmount);
     total.harvestEventsCount = total.harvestEventsCount.plus(BIG_INT_ONE);
   }
