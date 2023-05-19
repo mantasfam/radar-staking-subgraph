@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT LICENSE
-
 pragma solidity ^0.8.17;
+
+// Author: @mizi
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -11,20 +12,29 @@ import "./interfaces/iRadarStakingLogic.sol";
 contract RadarStake is iRadarStake, Ownable, ReentrancyGuard {
 
     constructor(address radarTokenContractAddr) {
+        require(address(radarTokenContractAddr) != address(0), "RadarStake: Token contract not set");
         radarTokenContract = iRadarToken(radarTokenContractAddr);
     }
 
     /** EVENTS */
     event AddedToStake(address indexed owner, uint256 amount);
     event RemovedFromStake(address indexed owner, uint256 amount);
+    event CooldownTriggered(address indexed owner, uint256 cooldownSeconds);
 
     /** PUBLIC VARS */
+    // interface of our ERC20 RADAR token
     iRadarToken public radarTokenContract;
+    // interface of the staking logic smart contract (stateless)
     iRadarStakingLogic public radarStakingLogicContract;
+    // keeps track of all staked tokens at all times
     uint256 public totalStaked;
+    // duration of the cooldown before a user can unstake
+    uint256 public cooldownSeconds = 30 days; // e.g. 86_400 = 1 day
+    // all APRs over time with their respective start and end times
     Apr[] public allAprs;
 
     /** PRIVATE VARS */
+    // all data needed to calculate staking rewards and for keeping tack of users staked funds
     mapping(address => Stake) private _stakedTokens;
 
     /** MODIFIERS */
@@ -33,102 +43,88 @@ contract RadarStake is iRadarStake, Ownable, ReentrancyGuard {
         _;
     }
 
-    modifier requireVariablesSet() {
-        require(address(radarTokenContract) != address(0), "RadarStake: Token contract not set");
-        require(address(radarStakingLogicContract) != address(0), "RadarStake: StakingLogic contract not set");
-        require(allAprs.length > 0, "RadarStake: No APR set");
-        _;
-    }
-
     /** PUBLIC */
+    // allow fetching all APRs with one call
     function getAllAprs() external view returns(Apr[] memory) {
         return allAprs;
     }
 
-    function getApr(uint256 index) external view returns(Apr memory) {
-        return allAprs[index];
-    }
-    
-    function getAllAprsLength() external view returns (uint256) {
-        return allAprs.length;
-    }
-
+    // get one user's staking information
     function getStake(address addr) external view returns (Stake memory) {
         return _stakedTokens[addr];
     }
 
-    function getTotalStaked() external view returns (uint256) {
-        return totalStaked;
-    }
-
     /** ONLY STAKING LOGIC CONTRACT */
+    // add to your stake & reset counters.
+    // allow amount == 0, so a user can reset timers without having to add tokens to its stake for doing so
     function addToStake(uint256 amount, address addr) external onlyStakingLogicContract {
-        require(amount >= 0, "RadarStake: Amount has to be 0 or higher");
         require(addr != address(0), "RadarStake: Cannot use the null address");
+        require(allAprs.length > 0, "RadarStake: No APR set");
 
-        uint256 _totalStaked = totalStaked;
-
+        // get current stake
         Stake memory myStake = _stakedTokens[addr];
-        if (myStake.totalStaked > 0 && _totalStaked >= myStake.totalStaked) {
-            // subtract the current stake
-            _totalStaked -= myStake.totalStaked;
-        } else {
-            // set to 0 if myStake is bigger than the amount of totalStaked tokens (which should never happen)
-            _totalStaked = 0;
-        }
 
-        // save new object
+        // save new Stake
         _stakedTokens[addr] = Stake({
             totalStaked: myStake.totalStaked + amount,
             lastStakedTimestamp: block.timestamp,
-            cooldownSeconds: 0, // cooldown is not yet defined
-            cooldownTriggeredAtTimestamp: 0 // cooldown is not yet defined
+            cooldownSeconds: 0, // reset cooldown
+            cooldownTriggeredAtTimestamp: 0 // reset cooldown
         });
 
-        _totalStaked += myStake.totalStaked + amount;
-        totalStaked = _totalStaked;
+        // increase the counter
+        totalStaked += amount;
 
         emit AddedToStake(addr, amount);
     }
 
-    function triggerUnstake(address addr, uint256 cooldownSeconds) external onlyStakingLogicContract {
+    // start the cooldown period before user can unstake when calling unstake() later
+    function triggerUnstake(address addr) external onlyStakingLogicContract {
         require(addr != address(0), "RadarStake: Cannot use the null address");
         require(cooldownSeconds > 0, "RadarStake: Cooldown seconds must be bigger than 0");
 
         Stake memory myStake = _stakedTokens[addr];
         require(myStake.totalStaked >= 0, "RadarStake: You have no stake yet");
+        require(myStake.cooldownTriggeredAtTimestamp == 0, "RadarStake: Cooldown is already in progress - cannot trigger it again");
 
-        if (myStake.cooldownSeconds <= 0) {
-            myStake.cooldownSeconds = cooldownSeconds;
-            myStake.cooldownTriggeredAtTimestamp = block.timestamp;
-            _stakedTokens[addr] = myStake;
-        }
+        // set the amount of seconds that have to pass before user can unstake
+        myStake.cooldownSeconds = cooldownSeconds;
+        // store the current time to calculate if the cooldown has passed
+        myStake.cooldownTriggeredAtTimestamp = block.timestamp;
+        // store the updated Stake to permantent storage
+        _stakedTokens[addr] = myStake;
+
+        emit CooldownTriggered(addr, cooldownSeconds);
     }
 
+    // remove from your stake
     function removeFromStake(uint256 amount, address addr) external onlyStakingLogicContract {
-        require(amount >= 0, "RadarStake: Amount cannot be lower than 0");
+        require(amount > 0, "RadarStake: Amount cannot be lower than 0");
         require(addr != address(0), "RadarStake: Cannot use the null address");
         Stake memory myStake = _stakedTokens[addr];
         require(myStake.cooldownSeconds >= 0, "RadarStake: CooldownSeconds cannot be lower than 0");
-        
         require(myStake.totalStaked >= amount, "RadarStake: You cannot unstake more than you have staked");
         require(totalStaked >= amount, "RadarStake: Cannot unstake more than is staked in total");
 
         if (myStake.totalStaked == amount) {
-            // clean memory when the whole stake is being taken out
-            delete(_stakedTokens[addr]);
+            delete(_stakedTokens[addr]); // clean memory when the whole stake is being taken out
         } else {
-            // save new object
-            myStake.totalStaked = myStake.totalStaked - amount;
-            _stakedTokens[addr] = myStake;
+            // save new Stake
+            _stakedTokens[addr] = Stake({
+                totalStaked: myStake.totalStaked - amount, // deduct the amount from the current stake
+                lastStakedTimestamp: block.timestamp, // reset stake timestamp because we always harvest rewards before unstaking
+                cooldownSeconds: 0, // reset cooldown
+                cooldownTriggeredAtTimestamp: 0 // reset cooldown
+            });
         }
-        totalStaked -= amount;
+        
+        totalStaked -= amount; // subtract from total staked amount
 
         emit RemovedFromStake(addr, amount);
     }
 
     /** ONLY OWNER */
-    // called when we deploy a new version of our staking rewards logic (new features etc.)
+    // called when we deploy a new version of our staking rewards logic (e.g. when launching new features)
     function setContracts(address radarStakingLogicContractAddr) external onlyOwner {
         require(radarStakingLogicContractAddr != address(0), "RadarStake: Cannot use the null address");
         radarStakingLogicContract = iRadarStakingLogic(radarStakingLogicContractAddr);
@@ -136,7 +132,7 @@ contract RadarStake is iRadarStake, Ownable, ReentrancyGuard {
 
     // e.g apr = 300 => 3% APR
     function changeApr(uint256 apr) external onlyOwner {
-        require(apr >= 0, "RadarStake: APR cannot be lower than 0");
+        require(apr > 0, "RadarStake: APR cannot be lower than 0");
 
         // set endTime for previous APR to make rewards calculations easier later on
         if (allAprs.length > 0) {
@@ -152,23 +148,29 @@ contract RadarStake is iRadarStake, Ownable, ReentrancyGuard {
         }));
     }
 
-    // this is needed so that our RadarStakingLogic contract is allowed to call transferFrom() in the name of this contract so that users can get their payout when they call RadarStakingLogic.harvest or RadarStakingLogic.unstake
+    // this is needed so that the radarStakingLogicContract is allowed to call transferFrom() in the name of this contract so that users can get back their tokens when they RadarStakingLogic.unstake
     function allowTokenTransfers(uint256 amount) external onlyOwner {
-        require(amount >= 0, "RadarStake: Amount cannot be lower than 0");
-
+        require(amount > 0, "RadarStake: Amount has to be greater than 0");
         radarTokenContract.approve(address(radarStakingLogicContract), amount);
+    }
+
+    // allow to change the cooldown period
+    function setCooldownSeconds(uint256 number) external onlyOwner {
+        require(number > 0, "RadarStake: Amount must be above 0");
+        cooldownSeconds = number;
     }
 
     // if someone sends RADAR to this contract by accident we want to be able to send it back to them
     function withdrawRewardTokens(address to, uint256 amount) external onlyOwner {
         require(to != address(0), "RadarStake: Cannot use the null address");
-        require(amount >= 0, "RadarStake: Amount cannot be lower than 0");
-        
+        require(amount > 0, "RadarStake: Amount has to be greater than 0");
         uint256 radarBalance = radarTokenContract.balanceOf(address(this));
         require(radarBalance >= amount, "RadarStake: Cannot withdraw more than is available");
-        
         require(radarBalance - amount >= totalStaked, "RadarStake: Cannot withdraw more than is staked");
+        
+        // approve this contract to move the amount of tokens
         radarTokenContract.approve(address(this), amount);
+        // transfer those tokens to the given address
         radarTokenContract.transferFrom(address(this), to, amount);
     }
 

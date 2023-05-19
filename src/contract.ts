@@ -125,8 +125,7 @@ export function handleTokensUnstakingTriggered(
     BIG_DEC_ZERO,
     newTransactionFlg,
     eventType,
-    tokensUnstakingTriggeredEvent.block.timestamp,
-    tokensUnstakingTriggeredEvent.params.cooldownSeconds
+    tokensUnstakingTriggeredEvent.block.timestamp
   );
 
   createEvent(

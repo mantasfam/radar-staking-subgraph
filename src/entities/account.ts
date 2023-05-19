@@ -1,14 +1,13 @@
 import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import { Account } from "../../generated/schema";
-import { BIG_INT_ZERO, BIG_INT_ONE, BIG_DEC_ZERO } from "../constants";
+import { BIG_INT_ZERO, BIG_INT_ONE, BIG_DEC_ZERO, COOLDOWN_SECONDS } from "../constants";
 
 export function updateAccount(
   address: Address,
   decimalAmount: BigDecimal,
   newTransactionFlg: boolean,
   eventType: string,
-  timestamp: BigInt = BIG_INT_ZERO,
-  cooldownSeconds: BigInt = BIG_INT_ZERO
+  timestamp: BigInt = BIG_INT_ZERO
 ): boolean {
   const addressString = address.toHexString();
   let account = Account.load(addressString);
@@ -49,7 +48,7 @@ export function updateAccount(
     account.harvestEventsCount = account.harvestEventsCount.plus(BIG_INT_ONE);
   } else if (eventType === "TRIGGER_UNSTAKE") {
     account.cooldownTriggeredAtTimestamp = timestamp;
-    account.cooldownEndTimestamp = account.cooldownTriggeredAtTimestamp.plus(cooldownSeconds);
+    account.cooldownEndTimestamp = account.cooldownTriggeredAtTimestamp.plus(COOLDOWN_SECONDS);
     account.cooldownEndTime = new Date(account.cooldownEndTimestamp.toI64() * 1000).toISOString();
   }
   account.save();

@@ -1,8 +1,8 @@
 {
-  "goerli": {
+  "bsc": {
     "Contract": {
-      "address": "0xa810a8005069B70C72a2a3E4a854595A31e7d197",
-      "startBlock": 8732371
+      "address": "0xa8cF5C7Dc37d459D35Aa704215F80be704aa0336",
+      "startBlock": 27540823
     }
   }
 }

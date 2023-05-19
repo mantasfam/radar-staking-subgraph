@@ -9,3 +9,6 @@ export const BIG_INT_ONE = BigInt.fromI32(1);
 export const BIG_DEC_ZERO = BigDecimal.zero();
 
 export const BIG_DECIMAL_1E18 = BigDecimal.fromString("1e18");
+
+// TO DO: get value from contract view function
+export const COOLDOWN_SECONDS = BigInt.fromI32(2592000);

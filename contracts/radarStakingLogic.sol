@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT LICENSE
-
 pragma solidity ^0.8.17;
+
+// Author: @mizi
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -10,43 +11,36 @@ import "./interfaces/iRadarStake.sol";
 
 contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
 
-    constructor(address rewardAddr, address radarTokenContractAddr, address radarStakeContractAddr) {
-        rewardAddress = rewardAddr;
+    constructor(address rewarderAddr, address radarTokenContractAddr, address radarStakeContractAddr) {
+        require(address(rewarderAddr) != address(0), "RadarStakingLogic: Rewarder address not set");
+        require(address(radarTokenContractAddr) != address(0), "RadarStakingLogic: Token contract not set");
+        require(address(radarStakeContractAddr) != address(0), "RadarStakingLogic: Staking contract not set");
+
+        rewarderAddress = rewarderAddr;
         radarTokenContract = iRadarToken(radarTokenContractAddr);
         radarStakeContract = iRadarStake(radarStakeContractAddr);
     }
 
     /** EVENTS */
     event TokensStaked(address indexed owner, uint256 amount);
-    event TokensHarvested(address indexed owner, uint256 amount);
+    event TokensHarvested(address indexed owner, uint256 amount, bool restake);
     event TokensUnstaked(address indexed owner, uint256 amount);
-    event TokensUnstakingTriggered(address indexed owner, uint256 cooldownSeconds);
+    event TokensUnstakingTriggered(address indexed owner);
 
     /** PUBLIC VARS */
     // interface of our ERC20 RADAR token
     iRadarToken public radarTokenContract;
     // interface of the staking contract (stateful)
     iRadarStake public radarStakeContract;
-    // the address which holds the reward tokens which get paid out to users when they harvest or unstake
-    address public rewardAddress;
-    // duration of the cooldown before a user can unstake
-    uint256 public cooldownSeconds = 30 days; // e.g. 86_400 = 1 day
+    // the address which holds the reward tokens, which get paid out to users when they harvest their rewards
+    address public rewarderAddress;
     // minimum amount to stake (aka. subscription for the DappRadar PRO subscription)
-    uint256 public stakeForDappRadarPro = 5_000 ether;
-
-    /** MODIFIERS */
-    modifier requireVariablesSet() {
-        require(address(rewardAddress) != address(0), "RadarStakingLogic: Reward Address not set");
-        require(address(radarTokenContract) != address(0), "RadarStakingLogic: Token contract not set");
-        require(address(radarStakeContract) != address(0), "RadarStakingLogic: Staking contract not set");
-        _;
-    }
+    uint256 public stakeForDappRadarPro = 30_000 ether;
 
     /** PUBLIC */
     // this contract needs to have permission to move RADAR for the _msgSender() before this function can be called
+    // allow amount == 0 so we can reset the staking timers without having to add tokens to the stake
     function stake(uint256 amount) external nonReentrant {
-        require(amount >= 0, "RadarStakingLogic: Amount must be above 0");
-        
         iRadarStake.Stake memory myStake = radarStakeContract.getStake(_msgSender());
         require(myStake.totalStaked + amount >= stakeForDappRadarPro, "RadarStakingLogic: You cannot stake less than the minimum");
 
@@ -58,17 +52,16 @@ contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
         // move tokens from the user to the staking contract
         radarTokenContract.transferFrom(_msgSender(), address(radarStakeContract), amount);
         
-        // calculate reward in case the user already had a stake and now added to it
+        // calculate rewards in case the user already has a stake and now adds to it
         uint256 tokenReward = calculateReward(_msgSender());
-        
-        // move additional tokens to the staking contract so it can later pay out the already accrued rewards
+        // move additional tokens to the staking contract so it can later pay out the already accrued and restaked rewards
         if (tokenReward > 0) {
-            radarTokenContract.transferFrom(rewardAddress, address(radarStakeContract), tokenReward);
+            radarTokenContract.transferFrom(rewarderAddress, address(radarStakeContract), tokenReward);
+            emit TokensHarvested(_msgSender(), tokenReward, true);
         }
 
-        // add to stake, which updates totals and timestamps
+        // add to stake, which updates totals and resets timestamps
         radarStakeContract.addToStake(amount + tokenReward, _msgSender());
-        
         emit TokensStaked(_msgSender(), amount + tokenReward);
     }
 
@@ -76,37 +69,43 @@ contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
     function harvest(bool restake) public nonReentrant {
         iRadarStake.Stake memory myStake = radarStakeContract.getStake(_msgSender());
         require(myStake.totalStaked > 0, "RadarStakingLogic: You don't have tokens staked");
-
         uint256 tokenReward = calculateReward(_msgSender());
+        require(tokenReward > 0, "RadarStakingLogic: No reward to harvest");
+        
+        emit TokensHarvested(_msgSender(), tokenReward, restake);
+
         if (restake) {
-            // stake again to reset the clock + add the reward to the stake (this happens automatically in the stake contract)
+            // move additional tokens to the staking contract so it can later pay out the already accrued and restaked rewards
+            radarTokenContract.transferFrom(rewarderAddress, address(radarStakeContract), tokenReward);
+
+            // stake again to reset the clock and add the reward to the existing stake
             radarStakeContract.addToStake(tokenReward, _msgSender());
+            emit TokensStaked(_msgSender(), tokenReward);
         } else {
             // stake again to reset the timestamps and cooldown
             radarStakeContract.addToStake(0, _msgSender());
+            // decided to not trigger this event because it does not add value
+            // emit TokensStaked(_msgSender(), 0);
 
             // pay out the rewards, keep the original stake, reset the clock
-            radarTokenContract.transferFrom(rewardAddress, _msgSender(), tokenReward);
+            radarTokenContract.transferFrom(rewarderAddress, _msgSender(), tokenReward);
         }
-
-        emit TokensHarvested(_msgSender(), tokenReward);
     }
 
     // trigger the cooldown so you can later on call unstake() to unstake your tokens
     function triggerUnstake() external nonReentrant {
         iRadarStake.Stake memory myStake = radarStakeContract.getStake(_msgSender());
-        require(myStake.totalStaked >= 0, "RadarStakingLogic: You have no stake yet");
+        require(myStake.totalStaked > 0, "RadarStakingLogic: You have no stake yet");
+        require(myStake.cooldownTriggeredAtTimestamp == 0, "RadarStakingLogic: Cooldown already triggered");
 
-        if (myStake.cooldownSeconds <= 0) {
-            radarStakeContract.triggerUnstake(_msgSender(), cooldownSeconds);
-        }
+        radarStakeContract.triggerUnstake(_msgSender());
 
-        emit TokensUnstakingTriggered(_msgSender(), cooldownSeconds);
+        emit TokensUnstakingTriggered(_msgSender());
     }
 
     // unstake your tokens + rewards after the cooldown has passed
     function unstake(uint256 amount) external nonReentrant {
-        require(amount >= 0, "RadarStakingLogic: Amount cannot be lower than 0");
+        require(amount > 0, "RadarStakingLogic: Amount cannot be lower than 0");
         iRadarStake.Stake memory myStake = radarStakeContract.getStake(_msgSender());
 
         require(myStake.cooldownTriggeredAtTimestamp > 0, "RadarStakingLogic: Cooldown not yet triggered");
@@ -118,15 +117,17 @@ contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
         // calculate rewards
         uint256 tokenReward = calculateReward(_msgSender());
 
-        // unstake
+        // unstake & reset cooldown
         radarStakeContract.removeFromStake(amount, _msgSender());
 
-        // transfer the rewards from the rewardAddress
-        radarTokenContract.transferFrom(rewardAddress, _msgSender(), tokenReward);
+        if (tokenReward > 0) {
+            // transfer the rewards from the rewarderAddress to the user aka. pay the rewards
+            radarTokenContract.transferFrom(rewarderAddress, _msgSender(), tokenReward);
+            emit TokensHarvested(_msgSender(), tokenReward, false);
+        }
 
         // transfer the stake from the radarStakeContract
         radarTokenContract.transferFrom(address(radarStakeContract), _msgSender(), amount);
-
         emit TokensUnstaked(_msgSender(), amount);
     }
 
@@ -140,6 +141,9 @@ contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
         // return 0 if the user has no stake
         if (totalStaked <= 0 ) return 0;
 
+        // calculate the timestamp when the cooldown is over
+        uint256 endOfCooldownTimestamp = myStake.cooldownTriggeredAtTimestamp + myStake.cooldownSeconds;
+
         iRadarStake.Apr[] memory allAprs = radarStakeContract.getAllAprs();
         for (uint256 i = 0; i < allAprs.length; i++) {
             iRadarStake.Apr memory currentApr = allAprs[i];
@@ -152,10 +156,11 @@ contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
 
             // use current timestamp if the APR is still active (aka. has no endTime yet)
             if (endTime <= 0) endTime = block.timestamp;
-
-            // once the cooldown is triggered, don't accrue any further from that point in time
+            
+            // once the cooldown is triggered, accumulate rewards only until that time
             if (myStake.cooldownTriggeredAtTimestamp > 0) {
-                endTime = myStake.cooldownTriggeredAtTimestamp;
+                // accumulate only until the cooldown is over - user can reset it by unstaking or staking again
+                if (endTime > endOfCooldownTimestamp) endTime = endOfCooldownTimestamp;
             }
 
             // protect against subtraction errors
@@ -164,38 +169,35 @@ contract RadarStakingLogic is iRadarStakingLogic, Ownable, ReentrancyGuard {
             uint256 secondsWithCurrentApr = endTime - startTime;
             uint256 daysPassed = secondsWithCurrentApr/1 days;
 
-            // calculate accrued reward for each APR period (per second)
-            uint256 accruedReward = totalStaked * currentApr.apr/10_000 * secondsWithCurrentApr/(365 days);
-
             // calculate compounding rewards (per day)
-            uint256 compoundingReward = calculateCompoundingReward(accruedReward, currentApr.apr, daysPassed);
+            uint256 compoundingReward = calculateCompoundingReward(totalStaked, currentApr.apr, daysPassed);
             
             // compound the rewards for each APR period
-            reward += accruedReward + compoundingReward;
-            totalStaked += reward;
+            reward += compoundingReward;
+            totalStaked += compoundingReward;
         }
 
         return reward;
     }
 
     // calculate compounding interest without running into floating point issues
-    function calculateCompoundingReward(uint256 principal, uint256 aprToUse, uint256 daysPassed) internal pure returns(uint256 compoundingReward) {
+    function calculateCompoundingReward(uint256 principal, uint256 aprToUse, uint256 daysPassed) private pure returns(uint256 compoundingReward) {
         for (uint256 i = 0; i < daysPassed; i++) {
             compoundingReward += (principal + compoundingReward) * aprToUse/10_000/365;
         }
     }
     
     /** ONLY OWNER */
-    // allow to change the cooldown period
-    function setCooldownSeconds(uint256 number) external onlyOwner {
-        require(number >= 0, "RadarStakingLogic: Amount must be above 0");
-        cooldownSeconds = number;
-    }
-
     // allow to change the minimum amount to stake & keep staked to keep the PRO subscription
     function setStakeForDappRadarPro(uint256 number) external onlyOwner {
-        require(number >= 0, "RadarStakingLogic: Amount must be above 0");
+        require(number > 0, "RadarStakingLogic: Amount must be above 0");
         stakeForDappRadarPro = number;
+    }
+
+    // set the address from which all RADAR rewards are paid
+    function setRewarderAddress(address addr) external onlyOwner {
+        require(address(addr) != address(0), "RadarStakingLogic: Rewarder address not set");
+        rewarderAddress = addr;
     }
 
     // if someone sends ETH to this contract by accident we want to be able to send it back to them
