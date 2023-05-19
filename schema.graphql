@@ -41,8 +41,6 @@ type Day @entity {
   # timestamp rounded to current day by dividing by 86400
   timestamp: Int!
   date: String!
-  stakedAmount: BigDecimal!
-  harvestedAmount: BigDecimal!
   dayStakedAmount: BigDecimal!
   daylUnstakedAmount: BigDecimal!
   dayHarvestAmount: BigDecimal!
@@ -50,11 +48,13 @@ type Day @entity {
   dayStakeEventsCount: BigInt!
   dayUnstakeEventsCount: BigInt!
   dayHarvestEventsCount: BigInt!
-  accountsCount: BigInt!
-  transactionsCount: BigInt!
-  stakeEventsCount: BigInt!
-  unstakeEventsCount: BigInt!
-  harvestEventsCount: BigInt!
+  totalStakedAmount: BigDecimal!
+  totalHarvestedAmount: BigDecimal!
+  totalAccountsCount: BigInt!
+  totalTransactionsCount: BigInt!
+  totalStakeEventsCount: BigInt!
+  totalUnstakeEventsCount: BigInt!
+  totalHarvestEventsCount: BigInt!
   transactions: [Transaction!] @derivedFrom(field: "day")
 }
 

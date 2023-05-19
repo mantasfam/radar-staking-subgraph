@@ -28,13 +28,13 @@ export function updateDay(
     day.dayHarvestEventsCount = BIG_INT_ZERO;
   }
 
-  day.stakedAmount = total.stakedAmount;
-  day.harvestedAmount = total.harvestedAmount;
-  day.accountsCount = total.accountsCount;
-  day.transactionsCount = total.transactionsCount;
-  day.stakeEventsCount = total.stakeEventsCount;
-  day.unstakeEventsCount = total.unstakeEventsCount;
-  day.harvestEventsCount = total.harvestEventsCount;
+  day.totalStakedAmount = total.stakedAmount;
+  day.totalHarvestedAmount = total.harvestedAmount;
+  day.totalAccountsCount = total.accountsCount;
+  day.totalTransactionsCount = total.transactionsCount;
+  day.totalStakeEventsCount = total.stakeEventsCount;
+  day.totalUnstakeEventsCount = total.unstakeEventsCount;
+  day.totalHarvestEventsCount = total.harvestEventsCount;
 
   if (newTransactionFlg) {
     day.dayTransactionsCount = day.dayTransactionsCount.plus(BIG_INT_ONE);
