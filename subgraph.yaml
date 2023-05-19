@@ -14,7 +14,6 @@ dataSources:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - OwnershipTransferred
         - TokensHarvested
         - TokensStaked
         - TokensUnstaked
@@ -23,8 +22,6 @@ dataSources:
         - name: Contract
           file: ./abis/Contract.json
       eventHandlers:
-        - event: OwnershipTransferred(indexed address,indexed address)
-          handler: handleOwnershipTransferred
         - event: TokensHarvested(indexed address,uint256,bool)
           handler: handleTokensHarvested
         - event: TokensStaked(indexed address,uint256)
