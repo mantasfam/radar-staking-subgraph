@@ -17,6 +17,7 @@ export function handleTokensStaked(tokensStakedEvent: TokensStakedEvent): void {
   let decimalAmount = tokensStakedEvent.params.amount.divDecimal(BIG_DECIMAL_1E18);
 
   log.debug("eventType: {}", [tokensStakedEvent.transaction.hash.toString()]);
+  log.info("eventType: {}", [tokensStakedEvent.transaction.hash.toString()]);
 
   const newTransactionFlg = createTransaction(
     tokensStakedEvent.transaction.hash,
@@ -110,6 +111,7 @@ export function handleTokensUnstakingTriggered(
   let eventType = "TRIGGER_UNSTAKE";
 
   log.debug("eventType: {}", [tokensUnstakingTriggeredEvent.transaction.hash.toString()]);
+  log.info("eventType: {}", [tokensUnstakingTriggeredEvent.transaction.hash.toString()]);
 
   const newTransactionFlg = createTransaction(
     tokensUnstakingTriggeredEvent.transaction.hash,
