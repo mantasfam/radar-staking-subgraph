@@ -4,5 +4,17 @@
       "address": "0xa8cF5C7Dc37d459D35Aa704215F80be704aa0336",
       "startBlock": 27540823
     }
+  },
+  "matic": {
+    "Contract": {
+      "address": "0x918B5c4Ad02604f0133Cc65767D6B16F2f5Eb087",
+      "startBlock": 50613373
+    }
+  },
+  "mainnet": {
+    "Contract": {
+      "address": "0x081C7b399Fd5cB5805667De270127783CEeAC488",
+      "startBlock": 17124485
+    }
   }
 }
