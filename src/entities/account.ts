@@ -38,14 +38,15 @@ export function updateAccount(
   } else if (eventType === "UNSTAKE") {
     account.stakedAmount = account.stakedAmount.minus(decimalAmount);
     account.unstakeEventsCount = account.unstakeEventsCount.plus(BIG_INT_ONE);
-    if (account.stakedAmount === BIG_DEC_ZERO) {
-      account.cooldownTriggeredAtTimestamp = BIG_INT_ZERO;
-      account.cooldownEndTimestamp = BIG_INT_ZERO;
-      account.cooldownEndTime = "";
-    }
+    account.cooldownTriggeredAtTimestamp = BIG_INT_ZERO;
+    account.cooldownEndTimestamp = BIG_INT_ZERO;
+    account.cooldownEndTime = "";
   } else if (eventType === "HARVEST ") {
     account.harvestedAmount = account.harvestedAmount.plus(decimalAmount);
     account.harvestEventsCount = account.harvestEventsCount.plus(BIG_INT_ONE);
+    account.cooldownTriggeredAtTimestamp = BIG_INT_ZERO;
+    account.cooldownEndTimestamp = BIG_INT_ZERO;
+    account.cooldownEndTime = "";
   } else if (eventType === "TRIGGER_UNSTAKE") {
     account.cooldownTriggeredAtTimestamp = timestamp;
     account.cooldownEndTimestamp = account.cooldownTriggeredAtTimestamp.plus(COOLDOWN_SECONDS);
