@@ -3,7 +3,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "codegen": "graph codegen",
-    "build": "graph build",
+    "build": "graph build --network mainnet",
     "deploy": "graph deploy --product hosted-service mantasfam/radar-staking-ethereum",
     "create-local": "graph create --node http://localhost:8020/ staking01",
     "remove-local": "graph remove --node http://localhost:8020/ staking01",

@@ -41,7 +41,7 @@ export function updateAccount(
     account.cooldownTriggeredAtTimestamp = BIG_INT_ZERO;
     account.cooldownEndTimestamp = BIG_INT_ZERO;
     account.cooldownEndTime = "";
-  } else if (eventType === "HARVEST ") {
+  } else if (eventType === "HARVEST") {
     account.harvestedAmount = account.harvestedAmount.plus(decimalAmount);
     account.harvestEventsCount = account.harvestEventsCount.plus(BIG_INT_ONE);
     account.cooldownTriggeredAtTimestamp = BIG_INT_ZERO;
